@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.IO;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace CameraPlus
 {
@@ -92,15 +93,30 @@ namespace CameraPlus
             Logger.Log($"{Plugin.Name} has started", LogLevel.Notice);
         }
 
+		bool isRestartingSong = false;
+
 
         public void OnActiveSceneChanged(Scene from, Scene to)
         {
+            if(isRestartingSong && to.name != "GameCore") return;
             SharedCoroutineStarter.instance.StartCoroutine(DelayedActiveSceneChanged(from, to));
         }
 
+        [HarmonyPatch(typeof(StandardLevelRestartController))]
+		[HarmonyPatch("RestartLevel")]
+		class hookRestart {
+			static void Prefix() {
+				Instance.isRestartingSong = true;
+			}
+		}
+
         private IEnumerator DelayedActiveSceneChanged(Scene from, Scene to)
         {
-            yield return new WaitForSeconds(0.5f);
+            bool isRestart = isRestartingSong;
+            isRestartingSong = false;
+
+            if(!isRestart)
+                yield return new WaitForSeconds(0.2f);
             // If any new cameras have been added to the config folder, render them
             // if(to.name == )
 
@@ -120,21 +136,26 @@ namespace CameraPlus
                     }
                 }
 
-                yield return new WaitForSeconds(1.0f);
-                while (Camera.main == null) yield return null;
+                if(!isRestart) {
+                    yield return new WaitForSeconds(0.3f);
+                    while (Camera.main == null) yield return null;
 
-                // Invoke each activeSceneChanged event
-                foreach (var func in ActiveSceneChanged?.GetInvocationList())
-                {
-                    try
+                    // Invoke each activeSceneChanged event
+                    foreach (var func in ActiveSceneChanged?.GetInvocationList())
                     {
-                        func?.DynamicInvoke(from, to);
+                        try
+                        {
+                            func?.DynamicInvoke(from, to);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"Exception while invoking ActiveSceneChanged:" +
+                                $" {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.Log($"Exception while invoking ActiveSceneChanged:" +
-                            $" {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
-                    }
+                } else {
+                    foreach(CameraPlusInstance c in Instance.Cameras.Values.ToArray())
+                        c.Instance.SceneManager_activeSceneChanged(from, to);
                 }
             }
             if (to.name == "GameCore" || to.name == "MenuCore" || to.name == "MenuViewControllers" || to.name == "HealthWarning")
@@ -145,7 +166,8 @@ namespace CameraPlus
                 else
                     _origin = gameObject.transform;
 
-                CameraUtilities.SetAllCameraCulling();
+                if(!isRestart)
+                    CameraUtilities.SetAllCameraCulling();
             }
         }
 
@@ -164,7 +186,7 @@ namespace CameraPlus
         public void OnFixedUpdate()
         {
             // Fix the cursor when the user resizes the main camera to be smaller than the canvas size and they hover over the black portion of the canvas
-            if (CameraPlusBehaviour.currentCursor != CameraPlusBehaviour.CursorType.None && !CameraPlusBehaviour.anyInstanceBusy && 
+            if (CameraPlusBehaviour.currentCursor != CameraPlusBehaviour.CursorType.None && !CameraPlusBehaviour.anyInstanceBusy &&
                 CameraPlusBehaviour.wasWithinBorder && CameraPlusBehaviour.GetTopmostInstanceAtCursorPos() == null)
             {
                 CameraPlusBehaviour.SetCursor(CameraPlusBehaviour.CursorType.None);
