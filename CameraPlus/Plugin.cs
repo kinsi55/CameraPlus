@@ -136,26 +136,20 @@ namespace CameraPlus
                     }
                 }
 
-                if(!isRestart) {
-                    yield return new WaitForSeconds(0.3f);
-                    while (Camera.main == null) yield return null;
+                while (Camera.main == null) yield return new WaitForSeconds(0.05f);
 
-                    // Invoke each activeSceneChanged event
-                    foreach (var func in ActiveSceneChanged?.GetInvocationList())
+                // Invoke each activeSceneChanged event
+                foreach (var func in ActiveSceneChanged?.GetInvocationList())
+                {
+                    try
                     {
-                        try
-                        {
-                            func?.DynamicInvoke(from, to);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log($"Exception while invoking ActiveSceneChanged:" +
-                                $" {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
-                        }
+                        func?.DynamicInvoke(from, to);
                     }
-                } else {
-                    foreach(CameraPlusInstance c in Instance.Cameras.Values.ToArray())
-                        c.Instance.SceneManager_activeSceneChanged(from, to);
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"Exception while invoking ActiveSceneChanged:" +
+                            $" {ex.Message}\n{ex.StackTrace}", LogLevel.Error);
+                    }
                 }
             }
             if (to.name == "GameCore" || to.name == "MenuCore" || to.name == "MenuViewControllers" || to.name == "HealthWarning")
