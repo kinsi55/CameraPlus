@@ -665,43 +665,44 @@ namespace CameraPlus
 
         internal virtual void SetCullingMask()
         {
-            _cam.cullingMask = Camera.main.cullingMask;
-            if (Config.transparentWalls)
-                _cam.cullingMask &= ~(1 << TransparentWallsPatch.WallLayerMask);
-            else
-                _cam.cullingMask |= (1 << TransparentWallsPatch.WallLayerMask);
-            if (Config.avatar)
-            {
-                if (Config.thirdPerson || Config.use360Camera)
-                {
-                    _cam.cullingMask |= 1 << OnlyInThirdPerson;
-                    _cam.cullingMask &= ~(1 << OnlyInFirstPerson);
-                }
-                else
-                {
-                    _cam.cullingMask |= 1 << OnlyInFirstPerson;
-                    _cam.cullingMask &= ~(1 << OnlyInThirdPerson);
-                }
-                _cam.cullingMask |= 1 << AlwaysVisible;
-             }
-            else
-            {
-                _cam.cullingMask &= ~(1 << OnlyInThirdPerson);
-                _cam.cullingMask &= ~(1 << OnlyInFirstPerson);
-                _cam.cullingMask &= ~(1 << AlwaysVisible);
-            }
-            if (Config.debri!="link")
-            {
-                if (Config.debri=="show")
-                    _cam.cullingMask |= (1 << NotesDebriLayer);
-                else
-                    _cam.cullingMask &= ~(1 << NotesDebriLayer);
-            }
-            if (Config.HideUI)
-                _cam.cullingMask &= ~(1 << UILayer);
-            else
-                _cam.cullingMask |= (1 << UILayer);
-        }
+			//bool isFrozen = Plugin.Instance.freezeMask;
+			//Plugin.Instance.freezeMask = false;
+
+
+			int builder = Camera.main.cullingMask;
+			if(Config.transparentWalls)
+				builder &= ~(1 << TransparentWallsPatch.WallLayerMask);
+			else
+				builder |= (1 << TransparentWallsPatch.WallLayerMask);
+			if(Config.avatar) {
+				if(Config.thirdPerson || Config.use360Camera) {
+					builder |= 1 << OnlyInThirdPerson;
+					builder &= ~(1 << OnlyInFirstPerson);
+				} else {
+					builder |= 1 << OnlyInFirstPerson;
+					builder &= ~(1 << OnlyInThirdPerson);
+				}
+				builder |= 1 << AlwaysVisible;
+			} else {
+				builder &= ~(1 << OnlyInThirdPerson);
+				builder &= ~(1 << OnlyInFirstPerson);
+				builder &= ~(1 << AlwaysVisible);
+			}
+			if(Config.debri != "link") {
+				if(Config.debri == "show")
+					builder |= (1 << NotesDebriLayer);
+				else
+					builder &= ~(1 << NotesDebriLayer);
+			}
+			if(Config.HideUI)
+				builder &= ~(1 << UILayer);
+			else
+				builder |= (1 << UILayer);
+
+			_cam.cullingMask = builder;
+
+			//Plugin.Instance.freezeMask = isFrozen;
+		}
 
         public bool IsWithinRenderArea(Vector2 mousePos, Config c)
         {

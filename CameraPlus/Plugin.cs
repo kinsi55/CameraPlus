@@ -12,94 +12,110 @@ using UnityEngine.SceneManagement;
 using System.IO;
 using Newtonsoft.Json;
 using System.Linq;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
-namespace CameraPlus
-{
-    [Plugin(RuntimeOptions.SingleStartInit)]
-    public class Plugin
-    {
-        private bool _init;
-        private Harmony _harmony;
+namespace CameraPlus {
+	[Plugin(RuntimeOptions.SingleStartInit)]
+	public class Plugin {
+		private bool _init;
+		private Harmony _harmony;
 
-        public Action<Scene, Scene> ActiveSceneChanged;
-        public ConcurrentDictionary<string, CameraPlusInstance> Cameras = new ConcurrentDictionary<string, CameraPlusInstance>();
+		public Action<Scene, Scene> ActiveSceneChanged;
+		public ConcurrentDictionary<string, CameraPlusInstance> Cameras = new ConcurrentDictionary<string, CameraPlusInstance>();
 
-        public static Plugin Instance { get; private set; }
-        public static string Name => "CameraPlus";
-        public static string MainCamera => "cameraplus";
+		public static Plugin Instance { get; private set; }
+		public static string Name => "CameraPlus";
+		public static string MainCamera => "cameraplus";
 
-        public RootConfig _rootConfig;
-        public ProfileChanger _profileChanger;
-        public string _currentProfile;
+		public RootConfig _rootConfig;
+		public ProfileChanger _profileChanger;
+		public string _currentProfile;
 
-        public bool MultiplayerSessionInit;
+		public bool MultiplayerSessionInit;
 
-        public Transform _origin;
-        public VRCenterAdjust vrCenterAdjust;
+		public Transform _origin;
+		public VRCenterAdjust vrCenterAdjust;
 
-        [Init]
-        public void Init(IPALogger logger)
-        {
-            Logger.log = logger;
-            Logger.Log("Logger prepared", LogLevel.Debug);
-            string path = Path.Combine(UnityGame.UserDataPath, $"{Plugin.Name}.ini");
-            _rootConfig = new RootConfig(path);
-            if (_rootConfig.ForceDisableSmoothCamera)
-            {
-                try
-                {
-                    string gameCfgPath = Path.Combine(Application.persistentDataPath, "settings.cfg");
-                    var settings = JsonConvert.DeserializeObject<ConfigEntity>(File.ReadAllText(gameCfgPath));
-                    if (settings.version == "1.6.0")
-                    {
-                        if (settings.smoothCameraEnabled == 1)
-                        {
-                            settings.smoothCameraEnabled = 0;
-                            File.WriteAllText(gameCfgPath, JsonConvert.SerializeObject(settings));
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"Fail SmoothCamera off {e.Message}", LogLevel.Error);
-                }
-            }
-        }
+		[Init]
+		public void Init(IPALogger logger) {
+			Logger.log = logger;
+			Logger.Log("Logger prepared", LogLevel.Debug);
+			string path = Path.Combine(UnityGame.UserDataPath, $"{Plugin.Name}.ini");
+			_rootConfig = new RootConfig(path);
+			if(_rootConfig.ForceDisableSmoothCamera) {
+				try {
+					string gameCfgPath = Path.Combine(Application.persistentDataPath, "settings.cfg");
+					var settings = JsonConvert.DeserializeObject<ConfigEntity>(File.ReadAllText(gameCfgPath));
+					if(settings.version == "1.6.0") {
+						if(settings.smoothCameraEnabled == 1) {
+							settings.smoothCameraEnabled = 0;
+							File.WriteAllText(gameCfgPath, JsonConvert.SerializeObject(settings));
+						}
+					}
+				} catch(Exception e) {
+					Logger.Log($"Fail SmoothCamera off {e.Message}", LogLevel.Error);
+				}
+			}
 
-        [OnStart]
-        public void OnApplicationStart()
-        {
-            if (_init) return;
-            _init = true;
-            Instance = this;
+			//var x = AccessTools.PropertySetter(typeof(Camera), "cullingMask");
 
-            _harmony = new Harmony("com.brian91292.beatsaber.cameraplus");
-            try
-            {
-                _harmony.PatchAll(Assembly.GetExecutingAssembly());
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Failed to apply harmony patches! {ex}", LogLevel.Error);
-            }
+			//var d = x.MethodHandle;
 
-            SceneManager.activeSceneChanged += this.OnActiveSceneChanged;
-            // Add our default cameraplus camera
-            CameraUtilities.AddNewCamera(Plugin.MainCamera);
-            CameraProfiles.CreateMainDirectory();
+			//RuntimeHelpers.PrepareMethod(d);
 
-            _profileChanger = new ProfileChanger();
-            MultiplayerSessionInit = false;
-            Logger.Log($"{Plugin.Name} has started", LogLevel.Notice);
-        }
+			//var y = d.GetFunctionPointer();
+			//maskSetterAddr = (byte*)y.ToPointer();
+			//cullingMask_ogOp = *maskSetterAddr;
+
+			//Console.WriteLine(">> {0} {1}", y, (int)maskSetterAddr);
+		}
+
+		[OnStart]
+		public void OnApplicationStart() {
+			if(_init) return;
+			_init = true;
+			Instance = this;
+
+			_harmony = new Harmony("com.brian91292.beatsaber.cameraplus");
+			try {
+				_harmony.PatchAll(Assembly.GetExecutingAssembly());
+			} catch(Exception ex) {
+				Logger.Log($"Failed to apply harmony patches! {ex}", LogLevel.Error);
+			}
+
+			SceneManager.activeSceneChanged += this.OnActiveSceneChanged;
+			// Add our default cameraplus camera
+			CameraUtilities.AddNewCamera(Plugin.MainCamera);
+			CameraProfiles.CreateMainDirectory();
+
+			_profileChanger = new ProfileChanger();
+			MultiplayerSessionInit = false;
+			Logger.Log($"{Plugin.Name} has started", LogLevel.Notice);
+		}
 
 		bool isRestartingSong = false;
 
+		//public bool _freezeMask = false;
+		//unsafe byte* maskSetterAddr = (byte*)0;
+		//byte cullingMask_ogOp = 0;
+		//public unsafe bool freezeMask {
+		//	get { return _freezeMask; }
+		//	set {
+		//		if(maskSetterAddr == (byte*)0) return;
+
+		//		*maskSetterAddr = value ? (byte)0xC3 : cullingMask_ogOp;
+
+		//		_freezeMask = value;
+		//	}
+		//}
 
         public void OnActiveSceneChanged(Scene from, Scene to)
         {
             if(isRestartingSong && to.name != "GameCore") return;
-            SharedCoroutineStarter.instance.StartCoroutine(DelayedActiveSceneChanged(from, to));
+			//if(isRestartingSong && to.name == "GameCore" && freezeMask) freezeMask = false;
+
+			SharedCoroutineStarter.instance.StartCoroutine(DelayedActiveSceneChanged(from, to));
         }
 
         [HarmonyPatch(typeof(StandardLevelRestartController))]
@@ -107,20 +123,19 @@ namespace CameraPlus
 		class hookRestart {
 			static void Prefix() {
 				Instance.isRestartingSong = true;
+				//Instance.freezeMask = true;
 			}
 		}
 
-        private IEnumerator DelayedActiveSceneChanged(Scene from, Scene to)
+		private IEnumerator DelayedActiveSceneChanged(Scene from, Scene to)
         {
             bool isRestart = isRestartingSong;
             isRestartingSong = false;
 
-            if(!isRestart)
-                yield return new WaitForSeconds(0.2f);
-            // If any new cameras have been added to the config folder, render them
-            // if(to.name == )
+			CameraUtilities.ReloadCameras();
 
-            CameraUtilities.ReloadCameras();
+			if(!isRestart)
+                yield return new WaitForSeconds(0.2f);
 
             if (ActiveSceneChanged != null)
             {
@@ -138,8 +153,8 @@ namespace CameraPlus
 
                 while (Camera.main == null) yield return new WaitForSeconds(0.05f);
 
-                // Invoke each activeSceneChanged event
-                foreach (var func in ActiveSceneChanged?.GetInvocationList())
+				// Invoke each activeSceneChanged event
+				foreach (var func in ActiveSceneChanged?.GetInvocationList())
                 {
                     try
                     {
@@ -160,8 +175,8 @@ namespace CameraPlus
                 else
                     _origin = gameObject.transform;
 
-                if(!isRestart)
-                    CameraUtilities.SetAllCameraCulling();
+                //if(!isRestart)
+                CameraUtilities.SetAllCameraCulling();
             }
         }
 
