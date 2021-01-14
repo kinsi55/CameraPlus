@@ -130,10 +130,12 @@ namespace CameraPlus {
             bool isRestart = isRestartingSong;
             isRestartingSong = false;
 
-            CameraUtilities.ReloadCameras();
 
-            if(!isRestart)
+            if(!isRestart) {
+                CameraUtilities.ReloadCameras();
+
                 yield return new WaitForSeconds(0.2f);
+            }
 
             if(ActiveSceneChanged != null) {
                 if(_rootConfig.ProfileSceneChange) {
@@ -157,14 +159,11 @@ namespace CameraPlus {
                 }
             }
             if(to.name == "GameCore" || to.name == "MenuCore" || to.name == "MenuViewControllers" || to.name == "HealthWarning") {
-                GameObject gameObject = GameObject.Find("LocalPlayerGameCore/Origin");
-                if(gameObject == null)
-                    _origin = null;
-                else
-                    _origin = gameObject.transform;
-
-                //if(!isRestart)
                 CameraUtilities.SetAllCameraCulling();
+
+                if(isRestart)
+                    yield return new WaitForSeconds(0.1f);
+                _origin = GameObject.Find("LocalPlayerGameCore/Origin")?.transform;
             }
         }
 
