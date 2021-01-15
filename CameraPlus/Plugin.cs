@@ -131,14 +131,16 @@ namespace CameraPlus {
             isRestartingSong = false;
 
 
-            if(!isRestart) {
+            if(!isRestart)
                 CameraUtilities.ReloadCameras();
 
-                yield return new WaitForSeconds(0.2f);
+            IEnumerator waitForcam() {
+                yield return new WaitForSeconds(0.01f);
+                while(Camera.main == null) yield return new WaitForSeconds(0.05f);
             }
 
             if(ActiveSceneChanged != null) {
-                if(_rootConfig.ProfileSceneChange) {
+                if(_rootConfig.ProfileSceneChange && !isRestart) {
                     if(to.name == "GameCore" && _rootConfig.GameProfile != "" && (!MultiplayerSession.ConnectedMultiplay || _rootConfig.MultiplayerProfile == "")) {
                         _profileChanger.ProfileChange(_rootConfig.GameProfile);
                     } else if((to.name == "MenuCore" || to.name == "HealthWarning") && _rootConfig.MenuProfile != "" && (!MultiplayerSession.ConnectedMultiplay || _rootConfig.MultiplayerProfile == "")) {
@@ -146,7 +148,7 @@ namespace CameraPlus {
                     }
                 }
 
-                while(Camera.main == null) yield return new WaitForSeconds(0.05f);
+                yield return waitForcam();
 
                 // Invoke each activeSceneChanged event
                 foreach(var func in ActiveSceneChanged?.GetInvocationList()) {
@@ -158,6 +160,9 @@ namespace CameraPlus {
                     }
                 }
             }
+
+            yield return waitForcam();
+
             if(to.name == "GameCore" || to.name == "MenuCore" || to.name == "MenuViewControllers" || to.name == "HealthWarning") {
                 CameraUtilities.SetAllCameraCulling();
 
